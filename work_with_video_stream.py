@@ -16,7 +16,7 @@ with open("Resources/coco.names.txt") as file:
 classes_to_look_for = ["person"]
 
 
-def detect_object_on_frame_and_save(frame):
+def detect_object_on_frame(frame):
     """
     Функция для поиска заданного объекта на изображении.
     Принимает на вход один кадр из видео.
@@ -35,7 +35,7 @@ def detect_object_on_frame_and_save(frame):
             scores = obj[5:]
             class_index = np.argmax(scores)
             class_score = scores[class_index]
-            if class_score > 0.84:  # Вероятность совпадения. (Максимум 1.0)
+            if class_score > 0.8:  # Вероятность совпадения. (Максимум 1.0)
                 center_x = int(obj[0] * width)
                 center_y = int(obj[1] * height)
                 obj_width = int(obj[2] * width)
@@ -47,13 +47,13 @@ def detect_object_on_frame_and_save(frame):
 
     chosen_boxes = cv2.dnn.NMSBoxes(boxes, class_scores, 0.0, 0.4)
     for box_index in chosen_boxes:
-        box_index = box_index
         box = boxes[box_index]
         class_index = class_indexes[box_index]
 
         if classes[class_index] in classes_to_look_for:
             x, y, w, h = box
             frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
+
             save_detectid_objects(frame)
 
     return frame
@@ -103,17 +103,19 @@ def start_video_object_detection(camera, values_cam):
 
     ret, frame = camera.read()
     if ret:
+        frame = frame
         frame = frame[
             values_cam["height_start"]:values_cam["height_stop"],
             values_cam["width_start"]:values_cam["width_stop"]
         ]
     else:
-        print("Ошибка чтения...")
+        print("Ошибка чтения...", ctime())
         values_cam["reload"]()
         return
 
-    frame = detect_object_on_frame_and_save(frame)
+    frame = detect_object_on_frame(frame)
 
+    # Вывод видео на экран для отладки.
     frame = cv2.resize(frame, (1920 // 2, 1080 // 2))
     cv2.imshow(values_cam["name"], frame)
 
