@@ -1,9 +1,10 @@
 import cv2
 import os
-from time import ctime
 import numpy as np
+import requests
+from datetime import datetime
 
-from personal_data import camera_ip, login, password
+from personal_data import CAMERA_IP, LOGIN, PASSWORD, TOKEN, CHAT_ID
 
 net = cv2.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", "Resources/yolov4-tiny.weights")
 layer_names = net.getLayerNames()
@@ -24,7 +25,7 @@ def detect_object_on_frame(frame):
     и вызывает функцию для сохранения изображения.
     Возвращает обработанное изображение.
     """
-    height, width, _ = frame.shape 
+    height, width, _ = frame.shape
     blob = cv2.dnn.blobFromImage(frame, 1 / 255, (608, 608), (0, 0, 0), swapRB=True, crop=False)
     net.setInput(blob)
     outs = net.forward(out_layers)
@@ -63,94 +64,119 @@ def save_detectid_objects(frame):
     """
     Принимает изображение и сохраняет его в указаный каталог, в подкаталог
     с названием - текущая дата, присваивая изображению имя - текущее время.
+    После сохранения делает запрос телеграм боту для отправки изображения в телеграм,
+    заданному пользователю или группе.
     """
-    root_directory_name = "detectid objects"  # Каталог для сохранения.
-    subdirectory_name = f"{' '.join(ctime().split()[1:3])} {ctime().split()[-1]}"
-    file_name = f"{ctime().split()[3]}.jpg"
+    # Создаём путь и имя файла для сохранения.
+    directory_name = f"detectid objects/{datetime.now().date()}"
+    file_name = f"{datetime.now().time()}.jpg"
+    full_adress_and_name = f"{directory_name}/{file_name}"
 
-    if not os.path.isdir(root_directory_name):
-        os.mkdir(root_directory_name)
-    if not os.path.isdir(f"{root_directory_name}/{subdirectory_name}"):
-        os.mkdir(f"{root_directory_name}/{subdirectory_name}")
+    if not os.path.isdir(f"{directory_name}"):
+        os.makedirs(f"{directory_name}")
 
-    cv2.imwrite(f"{root_directory_name}/{subdirectory_name}/{file_name}", frame)
+    cv2.imwrite(full_adress_and_name, frame)
+    send_detectid_objects_to_telegram(full_adress_and_name)
+
+
+def send_detectid_objects_to_telegram(file):
+    """
+    Делает https запрос для отправки файла в телеграм.
+    """
+    file = {'photo': open(file, 'rb')}
+    requests.post(
+        url=f"https://api.telegram.org/bot{TOKEN}/sendPhoto?chat_id={CHAT_ID}",
+        files=file
+    )
 
 
 def camera_1_reload():
+    """
+    При обрыве соединения с камерой или ошибки чтения видео кадра
+    пересоздаёт соединение с камерой №1.
+    """
     global camera_1
     camera_1.release()
-    camera_1 = cv2.VideoCapture(settings_camera_1["full_address"])
+    camera_1 = cv2.VideoCapture(camera_settings["camera_1"]["full_address"])
 
 
 def camera_2_reload():
+    """
+    При обрыве соединения с камерой или ошибки чтения видео кадра
+    пересоздаёт соединение с камерой №2.
+    """
     global camera_2
     camera_2.release()
-    camera_2 = cv2.VideoCapture(settings_camera_2["full_address"])
+    camera_2 = cv2.VideoCapture(camera_settings["camera_2"]["full_address"])
 
 
 def camera_3_reload():
+    """
+    При обрыве соединения с камерой или ошибки чтения видео кадра
+    пересоздаёт соединение с камерой №3.
+    """
     global camera_3
     camera_3.release()
-    camera_3 = cv2.VideoCapture(settings_camera_3["full_address"])
+    camera_3 = cv2.VideoCapture(camera_settings["camera_3"]["full_address"])
 
 
-def start_video_object_detection(camera, values_cam):
+def start_video_object_detection(camera, cam_settings):
     """
     Захватывает из видеопотока кадр, вырезает из него нужную для поска объектов область
     и передаёт в другую функцию для поиска.
-    Две последнии строчки для вывода видео на экран для отладки.
+    Две последнии строчки для вывода видео на экран - для отладки.
     """
 
     ret, frame = camera.read()
     if ret:
-        frame = frame
         frame = frame[
-            values_cam["height_start"]:values_cam["height_stop"],
-            values_cam["width_start"]:values_cam["width_stop"]
+            cam_settings["height_start"]:cam_settings["height_stop"],
+            cam_settings["width_start"]:cam_settings["width_stop"]
         ]
     else:
-        print("Ошибка чтения...", ctime())
-        values_cam["reload"]()
+        cam_settings["reload"]()
         return
 
     frame = detect_object_on_frame(frame)
 
     # Вывод видео на экран для отладки.
     frame = cv2.resize(frame, (1920 // 2, 1080 // 2))
-    cv2.imshow(values_cam["name"], frame)
+    cv2.imshow(cam_settings["name"], frame)
 
 
-settings_camera_1 = {
-    "name": "cam_1",
-    "full_address": f"rtsp://{login}:{password}@{camera_ip}/user={login}_password={password}_channel=1_stream=0",
-    # Начальные и конечные значения высоты и ширины облясти поиска движения:
-    "height_start": 400,  # Верхняя граница высоты кадра
-    "height_stop": 1000,  # Нижняя граница высоты кадра
-    "width_start": 600,  # Левая граница ширины кадра
-    "width_stop": 1550,  # Правая граница ширины кадра
-    "reload": camera_1_reload
-}
-settings_camera_2 = {
-    "name": "cam_2",
-    "full_address": f"rtsp://{login}:{password}@{camera_ip}/user={login}_password={password}_channel=2_stream=0",
-    # Начальные и конечные значения высоты и ширины облясти поиска движения:
-    "height_start": 100,  # Верхняя граница высоты кадра
-    "height_stop": 1080,  # Нижняя граница высоты кадра
-    "width_start": 330,  # Левая граница ширины кадра
-    "width_stop": 1920,  # Правая граница ширины кадра
-    "reload": camera_2_reload
-}
-settings_camera_3 = {
-    "name": "cam_3",
-    "full_address": f"rtsp://{login}:{password}@{camera_ip}/user={login}_password={password}_channel=3_stream=0",
-    # Начальные и конечные значения высоты и ширины облясти поиска движения:
-    "height_start": 0,  # Верхняя граница высоты кадра
-    "height_stop": 1080,  # Нижняя граница высоты кадра
-    "width_start": 0,  # Левая граница ширины кадра
-    "width_stop": 1920,  # Правая граница ширины кадра
-    "reload": camera_3_reload
+camera_settings = {
+    "camera_1": {
+        "name": "cam_1",
+        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=1_stream=0",
+        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        "height_start": 400,  # Верхняя граница высоты кадра
+        "height_stop": 1000,  # Нижняя граница высоты кадра
+        "width_start": 600,  # Левая граница ширины кадра
+        "width_stop": 1550,  # Правая граница ширины кадра
+        "reload": camera_1_reload
+    },
+    "camera_2": {
+        "name": "cam_2",
+        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=2_stream=0",
+        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        "height_start": 100,  # Верхняя граница высоты кадра
+        "height_stop": 1080,  # Нижняя граница высоты кадра
+        "width_start": 330,  # Левая граница ширины кадра
+        "width_stop": 1920,  # Правая граница ширины кадра
+        "reload": camera_2_reload
+    },
+    "camera_3": {
+        "name": "cam_3",
+        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=3_stream=0",
+        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        "height_start": 0,  # Верхняя граница высоты кадра
+        "height_stop": 1080,  # Нижняя граница высоты кадра
+        "width_start": 0,  # Левая граница ширины кадра
+        "width_stop": 1920,  # Правая граница ширины кадра
+        "reload": camera_3_reload
+    }
 }
 
-camera_1 = cv2.VideoCapture(settings_camera_1["full_address"])
-camera_2 = cv2.VideoCapture(settings_camera_2["full_address"])
-camera_3 = cv2.VideoCapture(settings_camera_3["full_address"])
+camera_1 = cv2.VideoCapture(camera_settings["camera_1"]["full_address"])
+camera_2 = cv2.VideoCapture(camera_settings["camera_2"]["full_address"])
+camera_3 = cv2.VideoCapture(camera_settings["camera_3"]["full_address"])
