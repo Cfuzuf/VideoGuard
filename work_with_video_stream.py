@@ -3,8 +3,10 @@ import os
 import numpy as np
 import requests
 from datetime import datetime
+from time import time, sleep
 
-from personal_data import CAMERA_IP, LOGIN, PASSWORD, TOKEN, CHAT_ID
+from personal_data import CAMERA_IP, LOGIN, PASSWORD, TOKEN, CHANNEL_CHAT_ID
+
 
 net = cv2.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", "Resources/yolov4-tiny.weights")
 layer_names = net.getLayerNames()
@@ -55,44 +57,44 @@ def detect_object_on_frame(frame):
             x, y, w, h = box
             frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
-            save_detectid_objects(frame)
+            save_detected_objects(frame)
 
     return frame
 
 
-def save_detectid_objects(frame):
+def save_detected_objects(frame):
     """
-    Принимает изображение и сохраняет его в указаный каталог, в подкаталог
+    Принимает изображение и сохраняет его в указанный каталог, в подкаталог
     с названием - текущая дата, присваивая изображению имя - текущее время.
     После сохранения делает запрос телеграм боту для отправки изображения в телеграм,
     заданному пользователю или группе.
     """
     # Создаём путь и имя файла для сохранения.
-    directory_name = f"detectid objects/{datetime.now().date()}"
+    directory_name = f"detected objects/{datetime.now().date()}"
     file_name = f"{datetime.now().time()}.jpg"
-    full_adress_and_name = f"{directory_name}/{file_name}"
+    full_path_and_name = f"{directory_name}/{file_name}"
 
     if not os.path.isdir(f"{directory_name}"):
         os.makedirs(f"{directory_name}")
 
-    cv2.imwrite(full_adress_and_name, frame)
-    send_detectid_objects_to_telegram(full_adress_and_name)
+    cv2.imwrite(full_path_and_name, frame)
+    send_detected_objects_to_telegram(full_path_and_name)
 
 
-def send_detectid_objects_to_telegram(file):
+def send_detected_objects_to_telegram(file_path):
     """
     Делает https запрос для отправки файла в телеграм.
     """
-    file = {'photo': open(file, 'rb')}
+    file = {'photo': open(file_path, 'rb')}
     requests.post(
-        url=f"https://api.telegram.org/bot{TOKEN}/sendPhoto?chat_id={CHAT_ID}",
+        url=f"https://api.telegram.org/bot{TOKEN}/sendPhoto?chat_id={CHANNEL_CHAT_ID}",
         files=file
     )
 
 
 def camera_1_reload():
     """
-    При обрыве соединения с камерой или ошибки чтения видео кадра
+    При обрыве соединения с камерой, или ошибки чтения видео кадра
     пересоздаёт соединение с камерой №1.
     """
     global camera_1
@@ -102,7 +104,7 @@ def camera_1_reload():
 
 def camera_2_reload():
     """
-    При обрыве соединения с камерой или ошибки чтения видео кадра
+    При обрыве соединения с камерой, или ошибки чтения видео кадра
     пересоздаёт соединение с камерой №2.
     """
     global camera_2
@@ -112,7 +114,7 @@ def camera_2_reload():
 
 def camera_3_reload():
     """
-    При обрыве соединения с камерой или ошибки чтения видео кадра
+    При обрыве соединения с камерой, или ошибки чтения видео кадра
     пересоздаёт соединение с камерой №3.
     """
     global camera_3
@@ -120,11 +122,12 @@ def camera_3_reload():
     camera_3 = cv2.VideoCapture(camera_settings["camera_3"]["full_address"])
 
 
-def start_video_object_detection(camera, cam_settings):
+def start_video_object_detection(camera, cam_settings, show=False):
     """
-    Захватывает из видеопотока кадр, вырезает из него нужную для поска объектов область
+    Захватывает из видео-потока кадр, вырезает из него нужную для поиска объектов область
     и передаёт в другую функцию для поиска.
-    Две последнии строчки для вывода видео на экран - для отладки.
+
+    Две последние строчки для вывода видео на экран - для отладки.
     """
 
     ret, frame = camera.read()
@@ -139,16 +142,17 @@ def start_video_object_detection(camera, cam_settings):
 
     frame = detect_object_on_frame(frame)
 
-    # Вывод видео на экран для отладки.
-    frame = cv2.resize(frame, (1920 // 2, 1080 // 2))
-    cv2.imshow(cam_settings["name"], frame)
+    # Вывод видео на экран для отладки камер.
+    if show:
+        frame = cv2.resize(frame, (1920 // 2, 1080 // 2))
+        cv2.imshow(cam_settings["name"], frame)
 
 
 camera_settings = {
     "camera_1": {
         "name": "cam_1",
         "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=1_stream=0",
-        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 400,  # Верхняя граница высоты кадра
         "height_stop": 1000,  # Нижняя граница высоты кадра
         "width_start": 600,  # Левая граница ширины кадра
@@ -158,7 +162,7 @@ camera_settings = {
     "camera_2": {
         "name": "cam_2",
         "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=2_stream=0",
-        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 100,  # Верхняя граница высоты кадра
         "height_stop": 1080,  # Нижняя граница высоты кадра
         "width_start": 330,  # Левая граница ширины кадра
@@ -168,7 +172,7 @@ camera_settings = {
     "camera_3": {
         "name": "cam_3",
         "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=3_stream=0",
-        # Начальные и конечные значения высоты и ширины облясти поиска движения:
+        # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 0,  # Верхняя граница высоты кадра
         "height_stop": 1080,  # Нижняя граница высоты кадра
         "width_start": 0,  # Левая граница ширины кадра
@@ -180,3 +184,19 @@ camera_settings = {
 camera_1 = cv2.VideoCapture(camera_settings["camera_1"]["full_address"])
 camera_2 = cv2.VideoCapture(camera_settings["camera_2"]["full_address"])
 camera_3 = cv2.VideoCapture(camera_settings["camera_3"]["full_address"])
+
+if __name__ == "__main__":
+    while True:
+        start_time = time()
+
+        start_video_object_detection(camera_1, camera_settings["camera_1"], show=True)
+        start_video_object_detection(camera_2, camera_settings["camera_2"], show=True)
+        start_video_object_detection(camera_3, camera_settings["camera_3"], show=True)
+
+        if time() - start_time < 0.5:
+            sleep(0.5 - (time() - start_time))
+
+        if cv2.waitKey(1) == ord("q"):
+            break
+
+    cv2.destroyAllWindows()
