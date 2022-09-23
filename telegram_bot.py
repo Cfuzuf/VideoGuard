@@ -8,51 +8,53 @@ import work_with_video_stream
 bot = telebot.TeleBot(token=TOKEN)
 run_video_protection = False
 
+# Создание кнопок управления.
+button_start = telebot.types.KeyboardButton("Включить защиту.")
+button_stop = telebot.types.KeyboardButton("Выключить защиту.")
+button_status = telebot.types.KeyboardButton("Статус.")
+button_send_mi_photo = telebot.types.KeyboardButton("Доложить обстановку.")
 
-@bot.message_handler(commands=["status"])
+reply_keyboard_markup = telebot.types.ReplyKeyboardMarkup(resize_keyboard=True)
+reply_keyboard_markup.add(button_start, button_stop, button_status, button_send_mi_photo)
+
+
 def get_status(message):
-    if message.chat.id in ALLOWED_USERS_ID.values():
-        if run_video_protection:
-            bot.send_message(chat_id=message.chat.id,
-                             text="Объект под надёжной защитой!")
-        else:
-            bot.send_message(chat_id=message.chat.id,
-                             text="Объект остался без защиты...")
+    if run_video_protection:
+        bot.send_message(chat_id=message.from_user.id,
+                         text="Объект под надёжной защитой!")
     else:
-        bot.send_message(chat_id=message.chat.id,
-                         text="Я тебя не знаю и слушаться не буду!!!")
+        bot.send_message(chat_id=message.from_user.id,
+                         text="Объект остался без защиты...")
 
 
-@bot.message_handler(commands=["start"])
 def start_video_protection(message):
-    if message.chat.id in ALLOWED_USERS_ID.values():
-        global run_video_protection
-        if not run_video_protection:
-            run_video_protection = True
-            protection_activation(message)
-    else:
-        bot.send_message(chat_id=message.chat.id,
-                         text="Я тебя не знаю и слушаться не буду!!!")
+    """
+    Меняет флаг состояния защиты и запускает функцию защиты.
+    """
+    global run_video_protection
+    if not run_video_protection:
+        run_video_protection = True
+        protection_activation(message)
 
 
-@bot.message_handler(commands=["stop"])
-def stop_video_protection(message):
-    if message.chat.id in ALLOWED_USERS_ID.values():
-        global run_video_protection
-        if run_video_protection:
-            run_video_protection = False
-    else:
-        bot.send_message(chat_id=message.chat.id,
-                         text="Я тебя не знаю и слушаться не буду!!!")
+def stop_video_protection():
+    """
+    Меняет флаг состояния защиты для остановки выполнения функции защиты.
+    """
+    global run_video_protection, reply_keyboard_markup
+    if run_video_protection:
+        run_video_protection = False
 
 
 def protection_activation(message):
     """
     В бесконечном цикле вызывает функцию запуска поиска объектов поочерёдно для каждой камеры.
+    Меняет кнопки согласно обстановке.
     """
 
-    bot.send_message(chat_id=message.chat.id,
-                     text="Объект под надёжной защитой!")
+    bot.send_message(chat_id=message.from_user.id,
+                     text="Объект под надёжной защитой!",
+                     reply_markup=reply_keyboard_markup)
 
     while run_video_protection:
         start_time = time()
@@ -70,12 +72,30 @@ def protection_activation(message):
         if time() - start_time < 0.5:
             sleep(0.5 - (time() - start_time))
 
-    bot.send_message(chat_id=message.chat.id,
-                     text="Объект остался без защиты...")
+    bot.send_message(chat_id=message.from_user.id,
+                     text="Объект остался без защиты...",
+                     reply_markup=reply_keyboard_markup)
+
+
+@bot.message_handler(content_types=["text"])
+def message_handler(message):
+    if message.from_user.id in ALLOWED_USERS_ID.values():
+        if message.text == "Статус.":
+            get_status(message)
+        elif message.text == "Включить защиту.":
+            start_video_protection(message)
+        elif message.text == "Выключить защиту.":
+            stop_video_protection()
+        elif message.text == "Доложить обстановку.":
+            work_with_video_stream.get_all_cams_skreenshots(message)
+    else:
+        bot.send_message(chat_id=message.from_user.id,
+                         text="Я тебя не знаю и слушаться не буду!!!")
 
 
 def start_guard_bot():
     bot.send_message(chat_id=ALLOWED_USERS_ID["admin"],
-                     text="Бот запущен...")
+                     text="Бот запущен...",
+                     reply_markup=reply_keyboard_markup)
 
     bot.polling(non_stop=True)

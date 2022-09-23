@@ -23,8 +23,9 @@ def detect_object_on_frame(frame):
     """
     Функция для поиска заданного объекта на изображении.
     Принимает на вход один кадр из видео.
-    При обнаружении объекта рисует рамку вокруг объекта
-    и вызывает функцию для сохранения изображения.
+    При обнаружении объекта рисует рамку вокруг объекта,
+    вызывает функцию для сохранения изображения,
+    вызывает функцию для отправки изображения в телеграм.
     Возвращает обработанное изображение.
     """
     height, width, _ = frame.shape
@@ -57,7 +58,8 @@ def detect_object_on_frame(frame):
             x, y, w, h = box
             frame = cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 1)
 
-            save_detected_objects(frame)
+            file_path = save_detected_objects(frame)
+            send_detected_objects_to_telegram(file_path)
 
     return frame
 
@@ -66,8 +68,7 @@ def save_detected_objects(frame):
     """
     Принимает изображение и сохраняет его в указанный каталог, в подкаталог
     с названием - текущая дата, присваивая изображению имя - текущее время.
-    После сохранения делает запрос телеграм боту для отправки изображения в телеграм,
-    заданному пользователю или группе.
+    Возвращает полный путь к сохранённому файлу.
     """
     # Создаём путь и имя файла для сохранения.
     directory_name = f"detected objects/{datetime.now().date()}"
@@ -78,16 +79,17 @@ def save_detected_objects(frame):
         os.makedirs(f"{directory_name}")
 
     cv2.imwrite(full_path_and_name, frame)
-    send_detected_objects_to_telegram(full_path_and_name)
+
+    return full_path_and_name
 
 
-def send_detected_objects_to_telegram(file_path):
+def send_detected_objects_to_telegram(file_path, chat_id=CHANNEL_CHAT_ID):
     """
     Делает https запрос для отправки файла в телеграм.
     """
     file = {'photo': open(file_path, 'rb')}
     requests.post(
-        url=f"https://api.telegram.org/bot{TOKEN}/sendPhoto?chat_id={CHANNEL_CHAT_ID}",
+        url=f"https://api.telegram.org/bot{TOKEN}/sendPhoto?chat_id={chat_id}",
         files=file
     )
 
@@ -146,6 +148,26 @@ def start_video_object_detection(camera, cam_settings, show=False):
     if show:
         frame = cv2.resize(frame, (1920 // 2, 1080 // 2))
         cv2.imshow(cam_settings["name"], frame)
+
+
+def get_all_cams_skreenshots(message):
+    """
+    Делает полноразмерные снимки со всех камер и отправляет их в телеграм запросившему пользователю.
+    """
+    ret, frame = camera_1.read()
+    if ret:
+        file_path = save_detected_objects(frame)
+        send_detected_objects_to_telegram(file_path, chat_id=message.from_user.id)
+
+    ret, frame = camera_2.read()
+    if ret:
+        file_path = save_detected_objects(frame)
+        send_detected_objects_to_telegram(file_path, chat_id=message.from_user.id)
+
+    ret, frame = camera_3.read()
+    if ret:
+        file_path = save_detected_objects(frame)
+        send_detected_objects_to_telegram(file_path, chat_id=message.from_user.id)
 
 
 camera_settings = {
