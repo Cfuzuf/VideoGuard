@@ -128,7 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-personal_data.py
 setup.cfg
 .idea
 .vscode

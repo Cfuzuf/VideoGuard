@@ -1,7 +1,7 @@
 from time import time, sleep
 import telebot
 
-from personal_data import TOKEN, ALLOWED_USERS_ID
+from settings import TOKEN, ADMIN_CHAT_ID, ALLOWED_USERS_ID
 import work_with_video_stream
 
 
@@ -79,7 +79,7 @@ def protection_activation(message):
 
 @bot.message_handler(content_types=["text"])
 def message_handler(message):
-    if message.from_user.id in ALLOWED_USERS_ID.values():
+    if message.from_user.id == ADMIN_CHAT_ID or message.from_user.id in ALLOWED_USERS_ID.values():
         if message.text == "Статус.":
             get_status(message)
         elif message.text == "Включить защиту.":
@@ -94,7 +94,7 @@ def message_handler(message):
 
 
 def start_guard_bot():
-    bot.send_message(chat_id=ALLOWED_USERS_ID["admin"],
+    bot.send_message(chat_id=ADMIN_CHAT_ID,
                      text="Бот запущен...",
                      reply_markup=reply_keyboard_markup)
 

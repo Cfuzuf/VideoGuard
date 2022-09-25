@@ -5,7 +5,7 @@ import requests
 from datetime import datetime
 from time import time, sleep
 
-from personal_data import CAMERA_IP, LOGIN, PASSWORD, TOKEN, CHANNEL_CHAT_ID
+from settings import CAMERA_IP, CAMERA_LOGIN, CAMERA_PASSWORD, TOKEN, CHANNEL_CHAT_ID
 
 
 net = cv2.dnn.readNetFromDarknet("Resources/yolov4-tiny.cfg", "Resources/yolov4-tiny.weights")
@@ -173,7 +173,7 @@ def get_all_cams_skreenshots(message):
 camera_settings = {
     "camera_1": {
         "name": "cam_1",
-        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=1_stream=0",
+        "full_address": f"rtsp://{CAMERA_LOGIN}:{CAMERA_PASSWORD}@{CAMERA_IP}/user={CAMERA_LOGIN}_password={CAMERA_PASSWORD}_channel=1_stream=0",
         # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 400,  # Верхняя граница высоты кадра
         "height_stop": 1000,  # Нижняя граница высоты кадра
@@ -183,7 +183,7 @@ camera_settings = {
     },
     "camera_2": {
         "name": "cam_2",
-        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=2_stream=0",
+        "full_address": f"rtsp://{CAMERA_LOGIN}:{CAMERA_PASSWORD}@{CAMERA_IP}/user={CAMERA_LOGIN}_password={CAMERA_PASSWORD}_channel=2_stream=0",
         # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 100,  # Верхняя граница высоты кадра
         "height_stop": 1080,  # Нижняя граница высоты кадра
@@ -193,7 +193,7 @@ camera_settings = {
     },
     "camera_3": {
         "name": "cam_3",
-        "full_address": f"rtsp://{LOGIN}:{PASSWORD}@{CAMERA_IP}/user={LOGIN}_password={PASSWORD}_channel=3_stream=0",
+        "full_address": f"rtsp://{CAMERA_LOGIN}:{CAMERA_PASSWORD}@{CAMERA_IP}/user={CAMERA_LOGIN}_password={CAMERA_PASSWORD}_channel=3_stream=0",
         # Начальные и конечные значения высоты и ширины области поиска движения:
         "height_start": 0,  # Верхняя граница высоты кадра
         "height_stop": 1080,  # Нижняя граница высоты кадра
