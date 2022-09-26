@@ -37,7 +37,7 @@ def start_video_protection(message):
         protection_activation(message)
 
 
-def stop_video_protection():
+def stop_video_protection(message):
     """
     Меняет флаг состояния защиты для остановки выполнения функции защиты.
     """
@@ -77,17 +77,25 @@ def protection_activation(message):
                      reply_markup=reply_keyboard_markup)
 
 
+commands_handlers = {
+    "Включить защиту.": start_video_protection,
+    "Выключить защиту.": stop_video_protection,
+    "Статус.": get_status,
+    "Доложить обстановку.": work_with_video_stream.get_all_cams_skreenshots
+}
+
+
+@bot.message_handler(commands=["start"])
+def show_buttons(message):
+    bot.send_message(chat_id=message.from_user.id,
+                     text="Что прикажешь?",
+                     reply_markup=reply_keyboard_markup)
+
+
 @bot.message_handler(content_types=["text"])
 def message_handler(message):
-    if message.from_user.id == ADMIN_CHAT_ID or message.from_user.id in ALLOWED_USERS_ID.values():
-        if message.text == "Статус.":
-            get_status(message)
-        elif message.text == "Включить защиту.":
-            start_video_protection(message)
-        elif message.text == "Выключить защиту.":
-            stop_video_protection()
-        elif message.text == "Доложить обстановку.":
-            work_with_video_stream.get_all_cams_skreenshots(message)
+    if message.from_user.id == ADMIN_CHAT_ID or message.from_user.id in ALLOWED_USERS_ID:
+        commands_handlers[message.text](message)
     else:
         bot.send_message(chat_id=message.from_user.id,
                          text="Я тебя не знаю и слушаться не буду!!!")
