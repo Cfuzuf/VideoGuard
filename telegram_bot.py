@@ -34,7 +34,10 @@ def start_video_protection(message):
     global run_video_protection
     if not run_video_protection:
         run_video_protection = True
-        protection_activation(message)
+        bot.send_message(chat_id=message.from_user.id,
+                         text="Объект под надёжной защитой!",
+                         reply_markup=reply_keyboard_markup)
+        protection_activation()
 
 
 def stop_video_protection(message):
@@ -44,17 +47,16 @@ def stop_video_protection(message):
     global run_video_protection, reply_keyboard_markup
     if run_video_protection:
         run_video_protection = False
+        bot.send_message(chat_id=message.from_user.id,
+                         text="Объект остался без защиты...",
+                         reply_markup=reply_keyboard_markup)
 
 
-def protection_activation(message):
+def protection_activation():
     """
     В бесконечном цикле вызывает функцию запуска поиска объектов поочерёдно для каждой камеры.
     Меняет кнопки согласно обстановке.
     """
-
-    bot.send_message(chat_id=message.from_user.id,
-                     text="Объект под надёжной защитой!",
-                     reply_markup=reply_keyboard_markup)
 
     while run_video_protection:
         start_time = time()
@@ -71,10 +73,6 @@ def protection_activation(message):
 
         if time() - start_time < 1:
             sleep(1 - (time() - start_time))
-
-    bot.send_message(chat_id=message.from_user.id,
-                     text="Объект остался без защиты...",
-                     reply_markup=reply_keyboard_markup)
 
 
 commands_handlers = {
