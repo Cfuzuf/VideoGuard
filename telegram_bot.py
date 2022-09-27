@@ -69,8 +69,8 @@ def protection_activation(message):
             work_with_video_stream.camera_3,
             work_with_video_stream.camera_settings["camera_3"])
 
-        if time() - start_time < 0.5:
-            sleep(0.5 - (time() - start_time))
+        if time() - start_time < 1:
+            sleep(1 - (time() - start_time))
 
     bot.send_message(chat_id=message.from_user.id,
                      text="Объект остался без защиты...",
@@ -106,4 +106,4 @@ def start_guard_bot():
                      text="Бот запущен...",
                      reply_markup=reply_keyboard_markup)
 
-    bot.polling(non_stop=True)
+    bot.infinity_polling()

@@ -170,6 +170,7 @@ def get_all_cams_skreenshots(message):
         send_detected_objects_to_telegram(file_path, chat_id=message.from_user.id)
 
 
+# Настройки для камер (у меня их три).
 camera_settings = {
     "camera_1": {
         "name": "cam_1",
@@ -203,10 +204,12 @@ camera_settings = {
     }
 }
 
+# Подключаю каждую камеру (у меня их три).
 camera_1 = cv2.VideoCapture(camera_settings["camera_1"]["full_address"])
 camera_2 = cv2.VideoCapture(camera_settings["camera_2"]["full_address"])
 camera_3 = cv2.VideoCapture(camera_settings["camera_3"]["full_address"])
 
+# Для отладки настроек камер.
 if __name__ == "__main__":
     while True:
         start_time = time()
